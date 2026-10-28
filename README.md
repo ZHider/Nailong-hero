@@ -24,6 +24,21 @@ pnpm preview    # 预览构建产物 http://localhost:4173
 > 建议用 `http://` 或 `https://` 打开，不要直接双击 `dist/index.html`：
 > 图片校验用到 `crypto.subtle` 和 Cache Storage，`file://` 下会降级/报错。
 
+## 部署到 GitHub Pages
+
+```bash
+pnpm deploy      # = bash tools/deploy-gh-pages.sh
+```
+
+脚本会 `pnpm build`，然后把 `dist/` 原样推到 `origin` 的 `gh-pages` 分支
+（临时仓库提交，不污染 `main` 历史；带 `.nojekyll` 和 `* -text`，产物字节与 `dist/` 一致）。
+
+仓库 Pages 设置：Source = `gh-pages` 分支 `/` 根目录。当前线上地址：
+
+- https://zhider.github.io/Nailong-hero/
+
+`vite.config.js` 里 `base: './'` 用的是相对路径，所以放在 `/Nailong-hero/` 这种子目录下也能正常加载。
+
 ## 调试 / 金手指
 
 打开方式（任选其一）：

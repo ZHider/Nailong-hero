@@ -11,7 +11,8 @@
     "restore": "node tools/restore.cjs",
     "verify": "node tools/verify-ast.cjs",
     "verify:strict": "node tools/verify-ast.cjs --strict",
-    "verify:core": "node tools/verify-ast.cjs --only=core"
+    "verify:core": "node tools/verify-ast.cjs --only=core",
+    "deploy": "bash tools/deploy-gh-pages.sh"
   },
   "devDependencies": {
     "acorn": "^8.15.0",
