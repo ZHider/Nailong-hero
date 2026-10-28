@@ -1,0 +1,19 @@
+{
+  "name": "nailong-hero",
+  "private": true,
+  "version": "1.0.2",
+  "description": "勇者奶蛙传 —— 从线上 H5 构建产物恢复的源码工程",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host --port 4173",
+    "restore": "node tools/restore.cjs",
+    "verify": "node tools/verify-ast.cjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "vite": "^7.1.0",
+    "acorn": "^8.15.0"
+  }
+}
