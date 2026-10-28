@@ -9,11 +9,14 @@
     "build": "vite build",
     "preview": "vite preview --host --port 4173",
     "restore": "node tools/restore.cjs",
-    "verify": "node tools/verify-ast.cjs"
+    "verify": "node tools/verify-ast.cjs",
+    "verify:strict": "node tools/verify-ast.cjs --strict",
+    "verify:core": "node tools/verify-ast.cjs --only=core"
   },
   "devDependencies": {
+    "acorn": "^8.15.0",
+    "eslint-scope": "^9.1.2",
     "prettier": "^3.9.10",
-    "vite": "^7.1.0",
-    "acorn": "^8.15.0"
+    "vite": "^7.1.0"
   }
 }

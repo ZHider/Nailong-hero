@@ -68,8 +68,6 @@ index.html
 | 静态图片清单 | 背景 / 角色 / 轮廓 / 首领第二形态 / 渠道封面 | `wt` `we()` `Nt` `ws` |
 | 静态图片 SHA-256 清单 | 下载后逐张校验 | `qt` |
 | 图片缓存与预加载 | Cache Storage + 4 并发 + 解码校验 | `ks ne Xe Wt Te kt xt As At` |
-| 广告 SDK 适配 | 233 乐园 `metah5ad_v1.min.js`，含超时/取消/状态码解析 | `St ce Ss z Je He be Be Es jt Ts Ls Et Tt` |
-| 广告管理器 / 复活调度 | lease 生命周期；按死亡次数去重 | 类 `Ms`、`Ps`/`_`、类 `$s` |
 | 横竖屏与视口适配 | 旋转、全屏、safe-area、`--game-width/height` | `Rs()` |
 | 虚拟摇杆 | 左侧滑动区、指针捕获、旋转后坐标换算 | `Is()` |
 | 手游按键布局 | 默认坐标、存储键 `naiwa-touch-layout-v1`、拖拽/缩放/错开重叠 | `j le zs Le et Lt Me X nt`、编辑器 `wa()` |
@@ -85,7 +83,8 @@ index.html
 | 输入 | 防御、奶球、摇杆、冲刺/大笑/奶蛋/连点、超级大笑 | `Ce O tt qe q lt Qt` |
 | 全局事件 | 失焦暂停、`visibilitychange`、`pagehide` 存档、ESC 暂停、错误兜底 | `je()` `Zt()` |
 | 启动引导 | 等核心就绪 → 预加载图片（带进度）→ 进入标题 | `Ia()` |
-| 死亡后复活 | 激励视频看完成后再闯本关；非投放环境给出提示 | `Ca()` `Pa()` |
+| 死亡后重闯 | 失败界面 → 点「再来一次」直接回到本区域入口（原版此处要先看激励视频） | `Ca()` `Pa()` |
+| 广告 | **已移除**。原为 233 乐园激励视频（SDK 适配 / `AdManager` / 复活调度），见 `docs/CHANGELOG-ads-removed.md` | — |
 
 ## 五、运行时状态与存档键
 
@@ -106,10 +105,17 @@ index.html
 - 因此 `public/assets/` 下的图片**不要重新压缩/改名**，否则线上会直接报错。要换图，必须同时更新清单里的哈希。
 - 音频和结局视频没有哈希校验，可直接替换。
 
-## 七、与原产物的差异（唯一的三处）
+## 七、与原产物的差异
+
+**恢复时（纯还原，不改逻辑）**
 
 1. 去掉了 Vite 注入的 `__vite__mapDeps` / modulepreload polyfill / `__vitePreload`，`import('./main.js')` 用原生动态 import。
 2. CSS 改为在 JS 顶部 `import`（原版是构建期生成的 `<link>` 预加载）。
 3. `phaser-0YPJO2g1.js` 原样放进 `src/vendor/`，`main.js` 里 `import { g, r }` 的两个辅助函数保持不变。
 
-除以上之外，AST 与线上产物**逐语句一致**（`npm run verify` 可复现）。
+此时 AST 与线上产物逐语句一致（`core.js` 一侧共 5 处构建期改写，见 `pnpm verify:core`）。
+
+**之后的功能改动**
+
+4. 2026-10 移除广告：删除 SDK 适配、`AdManager`、复活调度与相关联动，死亡后直接重闯。
+   详见 `docs/CHANGELOG-ads-removed.md`。`pnpm verify` 的差异清单就是这些改动。

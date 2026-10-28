@@ -30,7 +30,7 @@ pnpm preview    # 预览构建产物 http://localhost:4173
 index.html              入口页（只有 <main id="app">）
 vite.config.js          base './'，assetsDir 'build'
 src/core.js             游戏核心：加载页 / 存档 / 数值表 / GameWorld（~3100 行）
-src/main.js             表现层：资源校验 / 广告 / 音频 / Phaser 场景 / DOM 界面（~5450 行）
+src/main.js             表现层：资源校验 / 音频 / Phaser 场景 / DOM 界面（~5250 行）
 src/vendor/phaser.js    Phaser 3.90.0 原始打包产物
 src/styles/*.css        两份样式（入口主题 + 界面）
 public/assets/**        74 张 webp + 8 段 mp3 + 桃罐头 svg + 结局 mp4
@@ -51,15 +51,19 @@ docs/                   架构说明、对照表、对比截图
 
 1. **素材逐字节一致**：`recovered/asset-manifest.json` 里是原包内置的 74 个图片 SHA-256，
    本地 `public/assets` 全部通过校验；音频/视频与原站 `Content-Length` 一致。
-2. **代码结构一致**：
+2. **代码结构比对**：
 
    ```bash
-   pnpm verify
+   pnpm verify          # 差异报告：列出 src 相对线上产物动了哪些顶层语句
+   pnpm verify:strict   # 严格模式：有任何差异就退出码 1
+   pnpm verify:core     # 只比 core.js（恢复后未再改动，应该只剩还原时的构建期改写）
    ```
 
-   脚本把 `src/*.js` 与 `recovered/assets/*.js` 逐个顶层语句做 AST 比对，
-   仅允许三处预期差异（移除 Vite 预加载运行时、`import('./main.js')` 还原、CSS 改为 import）。
-   当前结果：`RESULT: PASS`。
+   `pnpm verify` 把 `src/*.js` 与 `recovered/assets/*.js` 做顶层语句级 AST 比对，
+   分类成「一致 / 改动 / 删除 / 新增」。刚恢复完、没改过代码时 `--strict` 是 PASS；
+   现在多了两类**有意为之**的差异：还原时的构建期改写（Vite 预加载运行时、`import('./main.js')`、
+   CSS 改为 import，共 5 处，全在 core.js 一侧）和 2026-10 的广告移除（main.js 31 处，
+   见 `docs/CHANGELOG-ads-removed.md`）。
 3. **运行一致**：本地构建后与原站逐项对比 —— 请求的资源清单完全相同、控制台无报错
    （只有 Phaser 和 WebGL 的常规警告）、标题页/战斗场景/血条/波次/触控按钮表现一致。
    截图见 `docs/screenshots/live-battle.png`（线上）与 `docs/screenshots/recovered-battle.png`（本地构建）。
@@ -89,7 +93,9 @@ node tools/verify-ast.cjs   # 等价于 pnpm verify
 - **原工程的模块拆分不可还原**：Rollup 把小模块合并成了一个 chunk，恢复后按「核心 / 表现层」两段组织。
 - **图片有内置哈希校验**：改图必须同步更新 `src/main.js` 里的 `qt` 清单，否则加载会中断。
 - **结局视频 20MB**：`public/assets/cinematics/ending.mp4`，如果不需要可以在 `rt()` 里去掉。
-- **广告 SDK 依赖 233 乐园环境**：外部浏览器里会自动降级为「不支持广告」，不影响主流程。
+- **广告已移除**：原版死亡后要看完 233 乐园激励视频才能重闯；现已整段删除（SDK 适配、
+  `AdManager`、复活调度、`#death-ad-note` 文案与样式），改成「点一下直接重闯」。
+  详见 `docs/CHANGELOG-ads-removed.md`。
 
 ## 内容速查
 

@@ -620,330 +620,10 @@ async function At(a, t) {
   } catch {}
 }
 /* ==========================================================================
- * 广告 SDK 适配
- * 233 乐园 H5 广告 metah5ad_v1.min.js；非投放环境自动降级
+ * 广告（已移除）
+ * 原实现为 233 乐园激励视频（metah5ad_v1.min.js）：死亡后看完广告才解锁重闯。
+ * 下线广告后改为「点一下就直接重闯」，SDK 适配 / 广告管理器 / 复活调度已全部删除。
  * ========================================================================== */
-const St = { REWARD_VIDEO: 1 },
-  ce = { FAILED: -1, SHOWN: 0, CLOSED: 1, SKIPPED: 2, CLICKED: 3, REWARDED: 4 },
-  Ss = 'https://cdn.233xyx.com/h5ad/metah5ad_v1.min.js',
-  z = (a, t = null, e) => ({ success: !1, reason: a, status: t, mocked: !1, raw: e }),
-  Je = () => (typeof window > 'u' ? void 0 : window.MetaH5Ad),
-  He = (a) => !!a && typeof a.showAd == 'function' && typeof a.isAdSupport == 'function';
-function be(a, t = 0) {
-  if (t > 5) return null;
-  if (typeof a == 'string')
-    try {
-      return be(JSON.parse(a), t + 1);
-    } catch {
-      return null;
-    }
-  return !a || typeof a != 'object' || Array.isArray(a)
-    ? a
-    : Object.hasOwn(a, 'response')
-      ? be(a.response, t + 1)
-      : a;
-}
-function Be(a) {
-  if (
-    (typeof a != 'number' && typeof a != 'string') ||
-    a === '' ||
-    (typeof a == 'string' && !a.trim())
-  )
-    return null;
-  const t = Number(a);
-  return Number.isFinite(t) ? t : null;
-}
-function Es(a) {
-  const t = be(a),
-    e = be(t?.data),
-    i = e && typeof e == 'object' ? e.status : typeof e == 'number' ? e : t?.status;
-  return { code: Be(t?.code), status: Be(i) };
-}
-function jt() {
-  if (!(typeof window > 'u'))
-    for (const a of ['logBlue', 'logGreen', 'logRed', 'logYellow'])
-      typeof window[a] != 'function' && (window[a] = () => {});
-}
-let de;
-function Ts() {
-  return He(Je())
-    ? Promise.resolve(!0)
-    : de ||
-        (typeof document > 'u'
-          ? Promise.resolve(!1)
-          : (jt(),
-            (de = new Promise((a) => {
-              const t = document.createElement('script');
-              let e = !1;
-              const i = (n) => {
-                  e ||
-                    ((e = !0),
-                    clearTimeout(s),
-                    (t.onload = null),
-                    (t.onerror = null),
-                    n || t.remove(),
-                    a(n));
-                },
-                s = setTimeout(() => i(!1), 1e4);
-              ((t.async = !0),
-                (t.src = Ss),
-                (t.onload = () => i(He(Je()))),
-                (t.onerror = () => i(!1)));
-              try {
-                document.head.appendChild(t);
-              } catch {
-                i(!1);
-              }
-            }).then(
-              (a) => (a || (de = void 0), a),
-              () => ((de = void 0), !1),
-            )),
-            de));
-}
-function Ls() {
-  if (typeof window > 'u') return !0;
-  try {
-    if (window.self !== window.top) return !0;
-  } catch {
-    return !0;
-  }
-  const a = navigator.userAgent;
-  return !(
-    /iphone|ipad|ipod/i.test(a) &&
-    window.webkit?.messageHandlers &&
-    !/paradise|MetaH5Game/i.test(a)
-  );
-}
-function Et(a, t, e) {
-  return e?.aborted
-    ? Promise.resolve(void 0)
-    : new Promise((i) => {
-        let s = !1;
-        const n = (d) => {
-            s || ((s = !0), clearTimeout(o), e?.removeEventListener('abort', c), i(d));
-          },
-          c = () => n(),
-          o = setTimeout(c, t);
-        (e?.addEventListener('abort', c, { once: !0 }), a.then(n, () => n()));
-      });
-}
-function Tt(a, t) {
-  return a !== void 0 && Number.isFinite(a) && a > 0 ? a : t;
-}
-/* ==========================================================================
- * 广告管理器
- * 激励视频生命周期：lease / 活动通知 / 超时 / 取消
- * ========================================================================== */
-class Ms {
-  constructor(t = {}) {
-    l(this, 'lease', null);
-    l(this, 'displayLease', null);
-    l(this, 'rewardedLease', null);
-    l(this, 'activityListeners', new Set());
-    l(this, 'sdk');
-    l(this, 'load');
-    l(this, 'closeRequired');
-    l(this, 'preview');
-    ((this.sdk = t.sdk ?? Je),
-      (this.load = t.load ?? Ts),
-      (this.closeRequired = t.closeRequired ?? Ls),
-      (this.preview = t.preview));
-  }
-  get adActive() {
-    return this.displayLease !== null;
-  }
-  subscribeAdActivity(t) {
-    return (
-      this.activityListeners.add(t),
-      () => {
-        this.activityListeners.delete(t);
-      }
-    );
-  }
-  notifyActivity() {
-    for (const t of this.activityListeners)
-      try {
-        t();
-      } catch {}
-  }
-  startActivity(t) {
-    this.lease !== t || this.displayLease === t || ((this.displayLease = t), this.notifyActivity());
-  }
-  release(t) {
-    this.lease === t &&
-      ((this.lease = null),
-      (this.rewardedLease = null),
-      this.displayLease === t && ((this.displayLease = null), this.notifyActivity()));
-  }
-  confirmReturnedAfterReward() {
-    return !this.lease || this.rewardedLease !== this.lease ? !1 : (this.release(this.lease), !0);
-  }
-  async showRewardVideoAd(t = {}) {
-    if (t.signal?.aborted) return z('cancelled');
-    if (this.lease) return z('busy');
-    const e = {};
-    this.lease = e;
-    const i = () => this.release(e);
-    if ((jt(), this.preview)) {
-      this.startActivity(e);
-      try {
-        return await this.preview(t.signal);
-      } catch {
-        return z('exception');
-      } finally {
-        i();
-      }
-    }
-    const s = Tt(t.supportTimeoutMs, 1e4);
-    try {
-      if (!He(this.sdk()) && !(await Et(this.load(), s, t.signal)))
-        return (i(), z(t.signal?.aborted ? 'cancelled' : 'sdk_missing'));
-      const n = this.sdk();
-      if (!He(n)) return (i(), z('sdk_missing'));
-      let c = !1,
-        o = !1,
-        d = !1;
-      const f = await Et(
-        new Promise((b) => {
-          try {
-            n.isAdSupport(St.REWARD_VIDEO, (r) => {
-              if (!o) {
-                ((o = !0), d && i());
-                try {
-                  const p = be(r);
-                  b(Be(p?.code) === 0 && Be(be(p?.data)) === 1);
-                } catch {
-                  b(!1);
-                }
-              }
-            });
-          } catch {
-            ((o = !0), (c = !0), b(!1));
-          }
-        }),
-        s,
-        t.signal,
-      );
-      if (t.signal?.aborted || f === void 0)
-        return ((d = !0), o && i(), z(t.signal?.aborted ? 'cancelled' : 'timeout'));
-      if (c) return (i(), z('exception'));
-      if (f !== !0) return (i(), z('unsupported'));
-      const h = this.closeRequired();
-      return await new Promise((b) => {
-        let r = !1,
-          p = null;
-        const m = (k) => {
-            r || ((r = !0), clearTimeout(v), t.signal?.removeEventListener('abort', y), b(k));
-          },
-          y = () => m(z('cancelled', p)),
-          v = setTimeout(() => m(z('timeout', p)), Tt(t.timeoutMs, 12e4));
-        if ((t.signal?.addEventListener('abort', y, { once: !0 }), t.signal?.aborted)) {
-          (i(), y());
-          return;
-        }
-        try {
-          if ((this.startActivity(e), t.signal?.aborted)) {
-            (i(), y());
-            return;
-          }
-          n.showAd(St.REWARD_VIDEO, (k) => {
-            let D;
-            try {
-              D = Es(k);
-            } catch {
-              return;
-            }
-            const { code: $, status: R } = D;
-            if ($ === 0 && R === ce.CLOSED) {
-              (i(), m(z('closed', R, k)));
-              return;
-            }
-            if (($ !== null && $ !== 0) || ($ === 0 && R === ce.FAILED)) {
-              (i(), m(z('failed', R, k)));
-              return;
-            }
-            if (r) {
-              !h && $ === 0 && R === 4 && i();
-              return;
-            }
-            if (((p = R), $ === 0)) {
-              if (R === ce.REWARDED) {
-                (this.lease === e && (this.rewardedLease = e),
-                  h || i(),
-                  m({ success: !0, status: 4, reason: 'rewarded', mocked: !1, raw: k }));
-                return;
-              }
-              if (!(R === ce.SHOWN || R === ce.CLICKED) && R === ce.SKIPPED) {
-                m(z('skipped', R, k));
-                return;
-              }
-            }
-          });
-        } catch {
-          (i(), m(z('exception', p)));
-        }
-      });
-    } catch {
-      return (i(), z('exception'));
-    }
-  }
-}
-let Cs;
-const Ps = new Ms({ preview: Cs }),
-  Ds = () => ({ success: !1, status: null, reason: 'cancelled', mocked: !1 });
-/* ==========================================================================
- * 复活广告调度
- * 按死亡次数去重，切换关卡或重开时 abort 掉旧请求
- * ========================================================================== */
-class $s {
-  constructor(t = Ps) {
-    l(this, 'runToken', null);
-    l(this, 'generation', 0);
-    l(this, 'attempts', new Map());
-    l(this, 'controllers', new Set());
-    l(this, 'ads');
-    this.ads = t;
-  }
-  get adActive() {
-    return this.ads.adActive === !0;
-  }
-  subscribeAdActivity(t) {
-    return this.ads.subscribeAdActivity?.(t) ?? (() => {});
-  }
-  confirmReturnedAfterReward() {
-    return this.ads.confirmReturnedAfterReward?.() ?? !1;
-  }
-  setRun(t) {
-    this.runToken !== t && (this.invalidate(), (this.runToken = t));
-  }
-  invalidate() {
-    (this.generation++, (this.runToken = null));
-    for (const t of this.controllers) t.abort();
-    (this.controllers.clear(), this.attempts.clear());
-  }
-  present({ runToken: t, deathCount: e }) {
-    if (this.runToken !== t || !Number.isSafeInteger(e) || e < 0)
-      return Promise.resolve({ ad: Ds(), stale: !0 });
-    const i = this.attempts.get(e);
-    if (i) return i;
-    const s = this.generation,
-      n = new AbortController();
-    this.controllers.add(n);
-    const c = Promise.resolve()
-      .then(() => this.ads.showRewardVideoAd({ signal: n.signal }))
-      .catch(() => ({ success: !1, status: null, reason: 'exception', mocked: !1 }))
-      .then((o) => {
-        const d = s !== this.generation || this.runToken !== t;
-        return (
-          !d && !o.success && this.attempts.get(e) === c && this.attempts.delete(e),
-          { ad: o, stale: d }
-        );
-      })
-      .finally(() => this.controllers.delete(n));
-    return (this.attempts.set(e, c), c);
-  }
-}
-const _ = new $s();
 /* ==========================================================================
  * 横竖屏与视口适配
  * 旋转、全屏、safe-area 与 --game-width/--game-height 变量
@@ -4215,14 +3895,6 @@ function ma(a, t) {
   };
 }
 const Ne = { ...ds, companion: !0 };
-let he = '',
-  N = !1,
-  _t = 0,
-  ae = 0,
-  ue = !1;
-function ot() {
-  ((he = `${Date.now()}-${Math.random().toString(36).slice(2)}`), (ue = !1), ae++, _.setRun(he));
-}
 let Gt;
 /* ==========================================================================
  * 页面骨架与图标
@@ -4276,7 +3948,7 @@ ge.innerHTML = `
   <section data-screen="new-run-confirm" class="screen modal-screen hidden"><div class="small-modal"><div class="eyebrow">已有未完成的冒险</div><h2>重新出发？</h2><p>新开一局会覆盖本机保存的进度。<br>想接着玩，请返回后选择“继续冒险”。</p><button id="confirm-new-run" class="primary">确认重新开始</button><button id="cancel-new-run" class="secondary">返回</button></div></section><section data-screen="upgrade" class="screen modal-screen hidden"><div class="upgrade-content"><div class="eyebrow">有点上头了</div><h2>选一招，更离谱。</h2><p>选择招式强化或被动技能 · 奶球始终可手动发射</p><div id="upgrade-cards"></div><small>战斗已暂停，慢慢选。</small></div></section>
   <section data-screen="pause" class="screen modal-screen hidden"><div class="small-modal"><div class="eyebrow">勇者休息中</div><h2>歇会儿，再笑。</h2><p>战斗和计时已经暂停，可切回手机桌面休息。<br>保留此页面，回来点“继续营救”。关卡进度自动保存在本机，可从标题页继续。</p><button class="primary" data-action="resume">${T('play')}继续营救</button><button class="secondary" data-action="rest">暂离休息 · 保留本局</button><button class="secondary" data-action="settings">声音与画面</button><button class="text-btn" data-action="home">返回标题</button></div></section>
   <section data-screen="settings" class="screen modal-screen hidden"><div class="small-modal"><button class="modal-close icon-btn" data-action="close-settings" aria-label="关闭设置">${T('close')}</button><div class="eyebrow">按你喜欢的来</div><h2>声音与画面</h2><label class="setting-row"><div><b>全部静音</b><small>关闭音乐、音效与结局声音</small></div><input id="mute-setting" type="checkbox"><span class="switch"></span></label><label class="setting-row"><div><b>音效</b><small>撞击、大笑与城堡的回声</small></div><input id="sound-setting" type="checkbox"><span class="switch"></span></label><label class="setting-row"><div><b>背景音乐</b><small>循环播放；结局动画期间停播</small></div><input id="bgm-setting" type="checkbox"><span class="switch"></span></label><label class="setting-row bgm-mode-row" for="bgm-mode-setting"><div><b>选择 BGM</b><small>自动：死亡等待时切换；复活后恢复战斗音乐</small></div><select id="bgm-mode-setting" aria-label="选择 BGM"><option value="auto">自动切换（默认）</option><option value="normal">只放普通 BGM</option></select></label><label class="setting-row"><div><b>镜头震动</b><small>冲撞与大招更有分量</small></div><input id="shake-setting" type="checkbox"><span class="switch"></span></label><button class="secondary touch-layout-button" data-action="touch-layout">${T('settings')}手游按键布局</button><button class="secondary" data-action="fullscreen">${T('expand')}切换全屏</button><p class="setting-note">电脑：WASD / 方向键走位<br>F 奶球（按住连发，松手停止）<br>按住空格防御 · Shift 冲撞（通关奶笑村解锁，冷却2秒、最多存2次；冲撞中点击可接续一次）<br>E 大笑 · C 罐头 · V 奶蛋助阵 · Esc 暂停<br>最终关：Q 讲笑话 / 超级大笑<br>大招中：连续点击大按钮 / 连按 R 维持笑声<br>手机：左侧按下出现摇杆，滑动走位；右侧释放技能。可在“手游按键布局”中调整大小和位置，默认保持当前布局。<br>奶蛋助阵：立即张嘴并播放释放音效，结束后奶蛋和奶蛙同步大笑；大笑结束后保留5秒强化。仅张嘴释放音效期间无敌，大笑与余力期间会受伤。奶球5发（三连后7发）、伤害翻倍；强化结束后冷却30秒。强化中可以讲笑话蓄力，结束后才能释放超级大笑。<br>进度保存在当前浏览器；清除网站数据会移除存档。</p></div></section>
-  <section data-screen="defeat" class="screen modal-screen hidden"><div class="small-modal"><div class="defeat-face">…</div><div class="eyebrow">只是肚子着地了</div><h2 id="defeat-message">豆公主，我一定会找到最完美的时间线的！</h2><p>从本区域入口重试，保留进入区域时的强化。</p><button class="primary" data-action="retry">${T('restart')}<span>看完广告再闯一次</span></button><p id="death-ad-note" class="leyuan-ad-note" role="status" aria-live="polite"></p><button class="text-btn" data-action="home">返回标题</button></div></section>
+  <section data-screen="defeat" class="screen modal-screen hidden"><div class="small-modal"><div class="defeat-face">…</div><div class="eyebrow">只是肚子着地了</div><h2 id="defeat-message">豆公主，我一定会找到最完美的时间线的！</h2><p>从本区域入口重试，保留进入区域时的强化。</p><button class="primary" data-action="retry">${T('restart')}<span>再来一次</span></button><button class="text-btn" data-action="home">返回标题</button></div></section>
   <section data-screen="win" class="screen modal-screen win-screen hidden"><div class="win-content"><div class="win-portrait"><img data-entry-src="./assets/characters/princess.webp" alt="获救的豆公主"><div class="rescue-seal">营救成功</div></div><div class="win-copy"><div class="eyebrow">游戏结束 · 营救成功</div><h2>全城堡，<br><em>笑场了。</em></h2><p class="princess-quote">“哈哈哈！你把魔王也逗笑了！”</p><div class="title-badge" id="result-title">城堡拆迁勇者</div><div class="result-stats"><div><b id="result-time">03:00</b><span>营救用时</span></div><div><b id="result-kills">0</b><span>击败敌人</span></div><div><b id="result-combo">0</b><span>最高连击</span></div></div><div class="win-buttons"><button class="primary" data-action="share">${T('share')}叫朋友来挑战</button><button class="secondary" data-action="replay">${T('restart')}再救一次</button></div><button class="text-btn" data-action="watch-ending">重看结局动画</button><button class="text-btn" data-action="poster">${T('download')}保存战绩图片</button><div class="result-best" id="result-best"></div></div></div></section>
   <section data-screen="cinematic" class="screen cinematic-screen hidden"><video id="ending-video" playsinline webkit-playsinline preload="none" disablepictureinpicture></video><div id="video-curtain" class="video-curtain"><p id="video-note">奶蛙这次，把整个城堡都逗笑了。</p></div><div class="cinematic-tools"><button id="video-sound" class="secondary">开启声音</button><button id="video-skip" class="secondary">跳过剧情</button></div></section>
   <div class="toast hidden" id="toast" role="status"></div>
@@ -4496,9 +4168,8 @@ function I() {
   (We.write('naiwa-settings-v1', x),
     w?.setSettings({
       ...x,
-      sound:
-        x.sound && !x.muted && !document.hidden && !N && !_.adActive && !U && g !== 'cinematic',
-      bgm: x.bgm && !x.muted && !document.hidden && !N && !_.adActive && !U && g !== 'cinematic',
+      sound: x.sound && !x.muted && !document.hidden && !U && g !== 'cinematic',
+      bgm: x.bgm && !x.muted && !document.hidden && !U && g !== 'cinematic',
     }),
     (S.muted = x.muted || !x.sound),
     (u('#mute-setting').checked = x.muted),
@@ -5015,7 +4686,6 @@ function dt() {
       (Z.enter(),
       M(''),
       u('#dialogue').classList.add('hidden'),
-      ot(),
       w.configure(Ne),
       w.start(),
       u('#naidan-button').classList.toggle('companion-locked', !Ne.companion),
@@ -5025,7 +4695,7 @@ function Sa() {
   B && (w.hasSave() ? M('new-run-confirm') : dt());
 }
 function Ea() {
-  if ((ot(), w.configure(Ne), (Q = null), (U = null), !!B)) {
+  if ((w.configure(Ne), (Q = null), (U = null), !!B)) {
     if (
       ((oe = !1),
       (G = !1),
@@ -5044,11 +4714,7 @@ function Ea() {
   }
 }
 async function Ft() {
-  (_.invalidate(),
-    (N = !1),
-    (ue = !1),
-    ae++,
-    (Q = null),
+  ((Q = null),
     (U = null),
     (oe = !1),
     (G = !1),
@@ -5322,7 +4988,7 @@ document.querySelectorAll('[data-action]').forEach((a) =>
         (M(pe), pe === '' && w.pause(!1));
         break;
       case 'fullscreen':
-        if (!Z.nativeFullscreenAvailable || N || _.adActive) break;
+        if (!Z.nativeFullscreenAvailable) break;
         try {
           document.fullscreenElement ? await document.exitFullscreen() : await Z.enter(!0);
         } catch {
@@ -5358,9 +5024,6 @@ function Zt() {
  * 失焦自动暂停、visibilitychange、pagehide 存档、键盘（ESC/数字键）、错误兜底
  * ========================================================================== */
 window.addEventListener('leyuan-storage-warning', Zt);
-_.subscribeAdActivity(() => {
-  B && I();
-});
 function je() {
   if ((J(), O(), q(), g === 'cinematic')) {
     document.hidden && S.pause();
@@ -5375,7 +5038,7 @@ const Z = Rs(
   () => {
     (J(), O(), q());
   },
-  () => N || _.adActive,
+  () => !1,
 );
 Z.nativeFullscreenAvailable ||
   document.querySelectorAll('[data-action="fullscreen"]').forEach((a) => {
@@ -5396,7 +5059,7 @@ window.addEventListener('pagehide', () => {
 document.addEventListener(
   'keydown',
   (a) => {
-    if (a.key === 'Escape' && !(ge.inert || N)) {
+    if (a.key === 'Escape' && !ge.inert) {
       if ((a.preventDefault(), a.stopImmediatePropagation(), K)) {
         (K.remove(), (K = void 0));
         return;
@@ -5536,18 +5199,10 @@ const Ia = (async () => {
     Zt());
 })();
 function Ca(a) {
-  ((_t = a.deaths),
-    ae++,
-    (ue = !1),
-    (N = !1),
-    w.save() || V('本机进度未能保存，请保留此页面。'),
-    J(),
-    O(),
-    q());
+  (w.save() || V('本机进度未能保存，请保留此页面。'), J(), O(), q());
   const t = u('[data-action="retry"]');
   ((t.disabled = !1),
-    (t.querySelector('span').textContent = '看完广告再闯一次'),
-    (u('#death-ad-note').textContent = '观看完成后，再点击按钮重闯本关。'),
+    (t.querySelector('span').textContent = '再来一次'),
     (u('#defeat-message').textContent =
       a.deaths <= 1
         ? '豆公主，我一定会找到最完美的时间线的！'
@@ -5558,45 +5213,11 @@ function Ca(a) {
     I());
 }
 /* ==========================================================================
- * 死亡后复活
- * 看完激励视频回到区域入口重闯；非投放环境给出提示
+ * 死亡后重闯
+ * 直接回到本区域入口重试（原版这里要先看完激励视频；广告下线后改为直接重闯）
  * ========================================================================== */
-async function Pa() {
-  if (g !== 'defeat' || N) return;
-  if (ue) {
-    (_.confirmReturnedAfterReward(), (ue = !1), Z.enter(), M(''), ot(), w.retry(), I());
-    return;
-  }
-  const a = he,
-    t = ae,
-    e = u('[data-action="retry"]');
-  ((N = !0), (e.disabled = !0), I(), (u('#death-ad-note').textContent = '正在准备广告，请稍候…'));
-  try {
-    const i = await _.present({ runToken: a, deathCount: _t });
-    if (i.stale || a !== he || t !== ae || g !== 'defeat') return;
-    if (i.ad.success === !0 && i.ad.status === 4)
-      ((ue = !0),
-        (e.querySelector('span').textContent = '点击重闯本关'),
-        (u('#death-ad-note').textContent = '广告已完成。点击按钮，从本区域入口重闯。'));
-    else {
-      const s = {
-        unsupported: '当前环境不支持广告，请在233乐园中打开。',
-        sdk_missing: '广告暂未准备好，请检查网络后重试；普通浏览器请在233乐园打开。',
-        closed: '广告已关闭，尚未完成观看。可再次尝试或返回标题。',
-        skipped: '广告未看完，暂未解锁重闯。可再次尝试或返回标题。',
-        timeout: '广告等待超时，暂未解锁重闯。可稍后重试或返回标题。',
-        busy: '上一条广告请求仍未结束，请稍后再试。',
-      };
-      u('#death-ad-note').textContent =
-        s[i.ad.reason] || '广告暂不可用，尚未解锁重闯。可再次尝试或返回标题。';
-    }
-  } catch {
-    a === he &&
-      t === ae &&
-      g === 'defeat' &&
-      (u('#death-ad-note').textContent = '广告暂不可用，尚未解锁重闯。请稍后重试或返回标题。');
-  } finally {
-    a === he && t === ae && g === 'defeat' && ((N = !1), (e.disabled = !1), I());
-  }
+function Pa() {
+  if (g !== 'defeat') return;
+  (Z.enter(), M(''), w.retry(), I());
 }
 export { Ia as entryReady };
