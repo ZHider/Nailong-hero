@@ -24,7 +24,8 @@ index.html
 | 文件 | 说明 |
 | --- | --- |
 | `src/core.js` | 入口。加载页、存档、升级与角色数值表、`GameWorld`（约 2500 行）、然后 `import('./main.js')` 拉起表现层 |
-| `src/main.js` | 表现层。资源加载与校验、广告、音频、Phaser 战斗场景、DOM 界面、输入、分享 |
+| `src/main.js` | 表现层。资源加载与校验、音频、Phaser 战斗场景、DOM 界面、输入、分享 |
+| `src/debug.js` | 调试面板（金手指）：跳关、清场、无敌、一击必杀、数值拉满。默认关闭 |
 | `src/vendor/phaser.js` | 线上使用的 Phaser 3.90.0 打包产物，原样保留（未改装、未格式化） |
 | `src/styles/game.css` | 入口样式（渠道主题 `html[data-channel=leyuan233]`） |
 | `src/styles/main.css` | 表现层样式（HUD、屏幕、触控按钮、按键布局编辑器） |
@@ -84,6 +85,7 @@ index.html
 | 全局事件 | 失焦暂停、`visibilitychange`、`pagehide` 存档、ESC 暂停、错误兜底 | `je()` `Zt()` |
 | 启动引导 | 等核心就绪 → 预加载图片（带进度）→ 进入标题 | `Ia()` |
 | 死亡后重闯 | 失败界面 → 点「再来一次」直接回到本区域入口（原版此处要先看激励视频） | `Ca()` `Pa()` |
+| 调试面板 | 金手指：跳关 / 清场 / 无敌 / 一击必杀 / 数值拉满（`src/debug.js`，走 `debugJump()` / `debugClear()` 与 `getModel()`） | `debugJump()` `debugClear()` |
 | 广告 | **已移除**。原为 233 乐园激励视频（SDK 适配 / `AdManager` / 复活调度），见 `docs/CHANGELOG-ads-removed.md` | — |
 
 ## 五、运行时状态与存档键

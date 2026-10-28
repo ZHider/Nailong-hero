@@ -6,6 +6,7 @@
  *   · 逻辑与字符串未改动，标识符沿用压缩后的短名（对照表见 docs/ARCHITECTURE.md）
  */
 import './styles/main.css';
+import { initDebug } from './debug.js';
 
 var ss = Object.defineProperty;
 var as = (a, t, e) =>
@@ -2064,6 +2065,29 @@ class pa extends W.Scene {
   chooseUpgrade(e) {
     (this.unlockAudio(), this.model.chooseUpgrade(e), this.handleEvents(), this.emitHud());
   }
+  /* ---- 调试用入口（src/debug.js 的面板调用，不参与正常流程） ---- */
+  debugJump(e) {
+    if (!this.ready) return !1;
+    const i = this.model;
+    // 不在战斗中（标题/结算/升级界面）就先正常开局，再切到目标章节
+    if (i.phase !== 'playing') this.begin();
+    i.enterZone(Math.max(0, Math.min(e, Ie.length - 1)), !0);
+    (this.handleEvents(), this.emitHud());
+    return !0;
+  }
+  debugClear() {
+    // BOSS 有「灭笑君临」二阶段：血量归零不会直接死，而是进入怒吼/换阶段。
+    // 所以在 ~2 秒内连打几轮，把二阶段、召唤出来的小怪一起清掉。
+    const i = this.model;
+    let pass = 0;
+    const sweep = () => {
+      for (const s of i.actors) s.dead || i.damage(s, 1e9, 1, 0);
+      (this.handleEvents(), this.emitHud());
+      pass += 1;
+      if (pass < 8 && i.actors.some((s) => !s.dead)) window.setTimeout(sweep, 250);
+    };
+    sweep();
+  }
   onKeyDown(e) {
     if (!e.repeat)
       switch (e.code) {
@@ -3887,6 +3911,10 @@ function ma(a, t) {
     jump: () => i.jump(),
     finishEnding: () => d(() => i.finishEnding()),
     setMove: (h, b) => i.setMove(h, b),
+    // 调试面板用（src/debug.js）
+    getModel: () => i.model,
+    debugJump: (h) => d(() => i.debugJump(h)),
+    debugClear: () => d(() => i.debugClear()),
     setSettings: (h) => i.setSettings(h),
     getSnapshot: () => i.getSnapshot(),
     destroy: () => {
@@ -5220,4 +5248,26 @@ function Pa() {
   if (g !== 'defeat') return;
   (Z.enter(), M(''), w.retry(), I());
 }
+/* ==========================================================================
+ * 调试面板（金手指）
+ * 密码 nailong / Ctrl+Shift+D / ?debug=1 打开；关掉时对正常玩法没有任何影响
+ * ========================================================================== */
+initDebug({
+  stages: st,
+  getModel: () => w?.getModel(),
+  jumpTo: (zone) => {
+    if (!w) return;
+    (Z.enter(), M(''), w.configure(Ne), w.pause(!1));
+    w.debugJump(zone);
+    I();
+  },
+  clearWave: () => {
+    (w?.debugClear(), M(''));
+  },
+  refreshHud: () => {
+    try {
+      xa(w.getModel().hud());
+    } catch {}
+  },
+});
 export { Ia as entryReady };

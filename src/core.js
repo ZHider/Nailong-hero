@@ -373,6 +373,8 @@ class Me {
     l(this, 'specialSpawned', !1);
     l(this, 'minibossSpawned', !1);
     l(this, 'comboCooldown', 0);
+    // 调试金手指开关（默认全关，正常玩法不受影响；由 src/debug.js 的控制面板修改）
+    l(this, 'debug', { invincible: !1, oneHit: !1 });
     this.hero = this.makeActor('hero', 260, 555);
   }
   contentRandom(e, t) {
@@ -1675,6 +1677,8 @@ class Me {
   }
   damage(e, t, i, n = 0) {
     if (e.dead) return;
+    // 调试金手指：一击必杀（把这一下的伤害提到最大，走正常的死亡/掉落/连击流程）
+    this.debug?.oneHit && (t = e.hp + 1);
     if (e.kind === 'penguin' && e.rageTime > 0) {
       this.fx('spark', e.x, e.y, { z: 72, color: 16772536 });
       return;
@@ -1696,7 +1700,10 @@ class Me {
     if (
       ((e.hp = Math.max(0, e.hp - t)),
       (e.hit = 0.16),
-      e.kind === 'penguin' && !e.rageTriggered && e.hp <= e.maxHp * 0.25)
+      e.kind === 'penguin' &&
+        !this.debug?.oneHit &&
+        !e.rageTriggered &&
+        e.hp <= e.maxHp * 0.25)
     )
       ((e.rageTriggered = !0),
         (e.rageTime = 10),
@@ -1807,6 +1814,11 @@ class Me {
       this.fx('spawn', i.x, i.y, { color: 16765813 }));
   }
   hurt(e, t) {
+    // 调试金手指：无敌（顺便记录挡下了多少次，面板里能看到）
+    if (this.debug?.invincible) {
+      this.debug.blocked = (this.debug.blocked || 0) + 1;
+      return !1;
+    }
     if (
       this.invulnerable > 0 ||
       this.naidanStage === 'call' ||

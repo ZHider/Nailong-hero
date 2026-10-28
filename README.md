@@ -24,6 +24,33 @@ pnpm preview    # 预览构建产物 http://localhost:4173
 > 建议用 `http://` 或 `https://` 打开，不要直接双击 `dist/index.html`：
 > 图片校验用到 `crypto.subtle` 和 Cache Storage，`file://` 下会降级/报错。
 
+## 调试 / 金手指
+
+打开方式（任选其一）：
+
+- 键盘依次敲 `n a i l o n g`（2.5 秒内，输入框里不算）
+- `Ctrl + Shift + D`
+- URL 加 `?debug=1`
+- 控制台 `__nailongDebug.open()`
+
+Esc 或点 × 关闭。面板内容：
+
+| 功能 | 说明 |
+| --- | --- |
+| 跳关 1–7 | 直接进入对应章节，回满血、重置本章波次（标题/结算界面也能用，会先正常开局再切章） |
+| 清空本波 | 秒杀场上所有敌人；连续扫 2 秒，所以 BOSS 的「灭笑君临」二阶段和召唤小怪也会被一起清掉，可直接推进到通关 |
+| 无敌 | 英雄不掉血，面板里显示「已挡 N 次」 |
+| 一击必杀 | 任何伤害都按「敌人剩余血量 + 1」结算，仍走正常的死亡/掉落/连击/经验流程 |
+| 满血 / 能量满 / 蓄力满 / 黄桃 +9 / 解锁冲撞 | 数值直接拉满，HUD 立刻刷新 |
+
+默认全关，刷新页面恢复，**正式对局不受影响**：`GameWorld` 上只有 `debug: { invincible, oneHit }` 两个开关，
+判断点分别在 `hurt()`（英雄受伤）和 `damage()`（敌人受伤）各一处。
+
+控制台里 `__nailongDebug.model()` 能直接拿到 `GameWorld`，可以随手改 `hp`、`energy`、`upgrades` 之类。
+
+不想保留这个功能时：删掉 `src/debug.js` 和 `src/main.js` 末尾的 `initDebug({...})` 即可；
+`core.js` 里两处 `this.debug?.xxx` 判断留着没有任何副作用。
+
 ## 目录结构
 
 ```
@@ -31,6 +58,7 @@ index.html              入口页（只有 <main id="app">）
 vite.config.js          base './'，assetsDir 'build'
 src/core.js             游戏核心：加载页 / 存档 / 数值表 / GameWorld（~3100 行）
 src/main.js             表现层：资源校验 / 音频 / Phaser 场景 / DOM 界面（~5250 行）
+src/debug.js            调试面板（金手指，默认关闭）
 src/vendor/phaser.js    Phaser 3.90.0 原始打包产物
 src/styles/*.css        两份样式（入口主题 + 界面）
 public/assets/**        74 张 webp + 8 段 mp3 + 桃罐头 svg + 结局 mp4
