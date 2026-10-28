@@ -48,6 +48,8 @@ Esc 或点 × 关闭。面板内容：
 
 控制台里 `__nailongDebug.model()` 能直接拿到 `GameWorld`，可以随手改 `hp`、`energy`、`upgrades` 之类。
 
+![调试面板](docs/screenshots/debug-panel.png)
+
 不想保留这个功能时：删掉 `src/debug.js` 和 `src/main.js` 末尾的 `initDebug({...})` 即可；
 `core.js` 里两处 `this.debug?.xxx` 判断留着没有任何副作用。
 
