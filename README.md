@@ -1,13 +1,4 @@
-# 勇者奶蛙传 —— 源码恢复工程
-
-从线上 H5 地址
-`https://h5.metaapp.cn/online/h5/BUsvkkbBiAq2pF2Ttx4j/1.0.2/6/index.html`
-恢复出来的可编辑、可构建、可部署的工程。
-
-原版只做了压缩（Vite 生产构建 + 变量名混淆），没有额外保护，所以可以完整还原：
-**逻辑、文案、数值、素材逐字节一致**；只有变量名是被压缩器改掉的短名（`a`、`t`、`e` 之类），
-这部分无法还原成作者当初的命名 —— 已在代码里加了分节标题，并在
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) 给出短名对照表。
+# 勇者奶蛙传
 
 ## 快速开始
 
@@ -113,34 +104,6 @@ docs/                   架构说明、对照表、对比截图
    （只有 Phaser 和 WebGL 的常规警告）、标题页/战斗场景/血条/波次/触控按钮表现一致。
    截图见 `docs/screenshots/live-battle.png`（线上）与 `docs/screenshots/recovered-battle.png`（本地构建）。
 
-## 恢复流程（可复现）
-
-```bash
-# 1. 抓取（已完成，抓取件在 recovered/）
-#    入口 index.html → assets/game-*.js + game-*.css + main-*.js + main-*.css + phaser-*.js
-#    + 代码里引用的 public 素材（含 20MB 结局视频 assets/cinematics/ending.mp4）
-
-# 2. 重新生成可读源码
-node tools/restore.cjs      # 等价于 pnpm restore
-
-# 3. 校验
-node tools/verify-ast.cjs   # 等价于 pnpm verify
-```
-
-`tools/restore.cjs` 做四件事：prettier 重排（100 列 / 单引号 / 尾逗号）、剥掉构建期运行时、
-把 chunk 间引用改成源码路径、按顶层语句位置插入分节注释。**不改任何逻辑**。
-
-## 已知限制
-
-- **变量名不可还原**：压缩器把局部变量改成了单字母，源码里的 `a`、`t`、`e`、`pa`、`Me`
-  就是它们。`docs/ARCHITECTURE.md` 里有主要短名的含义表；类名和方法名（`attack`、`save`、
-  `start` 等）没被压缩，仍然可读。
-- **原工程的模块拆分不可还原**：Rollup 把小模块合并成了一个 chunk，恢复后按「核心 / 表现层」两段组织。
-- **图片有内置哈希校验**：改图必须同步更新 `src/main.js` 里的 `qt` 清单，否则加载会中断。
-- **结局视频 20MB**：`public/assets/cinematics/ending.mp4`，如果不需要可以在 `rt()` 里去掉。
-- **广告已移除**：原版死亡后要看完 233 乐园激励视频才能重闯；现已整段删除（SDK 适配、
-  `AdManager`、复活调度、`#death-ad-note` 文案与样式），改成「点一下直接重闯」。
-  详见 `docs/CHANGELOG-ads-removed.md`。
 
 ## 内容速查
 
